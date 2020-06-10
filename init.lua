@@ -5,146 +5,215 @@ local sqrt = math.sqrt
 local atan2 = math.atan2
 local log = math.log
 local exp = math.exp
+local floor = math.floor
+local random = math.random
 local pi = math.pi
 
+--------------------------------------------------------------------------------
+
 local complex = ffi.typeof(1i)
-local cmath = {}
-local mt = {}
+
+local complexpolar = function(r, t)
+	return complex(r * cos(t), r * sin(t))
+end
+
+local iscomplex = function(a)
+	return ffi.istype(complex, a)
+end
 
 local tocomplex = function(a)
-	if ffi.istype(complex, a) then
+	if iscomplex(a) then
 		return a
 	end
 
-	return complex(tonumber(a))
+	local n = tonumber(a)
+	if n then
+		return complex(n)
+	end
+
+	return complex(a) -- error
 end
 
-local cabs = function(a)
-	a = tocomplex(a)
+local assert_int = function(a)
+	return assert(floor(a) == a, "k should be integer") and a
+end
+
+local complexrandom = function()
+	return complexpolar(random(), random() * 2 * pi)
+end
+
+--------------------------------------------------------------------------------
+
+local _copy = function(a)
+	return complex(a[0], a[1])
+end
+
+local _abs = function(a)
 	return sqrt(a[0] ^ 2 + a[1] ^ 2)
 end
 
-local carg = function(a)
-	a = tocomplex(a)
+local _arg = function(a)
 	return atan2(a[1], a[0])
 end
 
-local cnpolar = function(a)
-	a = tocomplex(a)
-	return a:abs(), a:arg()
+local _polar = function(a)
+	return _abs(a), _arg(a)
 end
 
-local ccpolar = function(r, f)
-	return complex(r * cos(f), r * sin(f))
-end
-
-local clog = function(a)
-	a = tocomplex(a)
-	return complex(log(a:abs()), a:arg())
-end
-
-local cexp = function(a)
-	a = tocomplex(a)
+local _exp = function(a)
 	local r = exp(a[0])
 	return complex(r * cos(a[1]), r * sin(a[1]))
 end
 
-local csin = function(a)
-	return (cexp(1i * a) - cexp(-1i * a)) / 2i
+local _log = function(a, k)
+	return complex(log(_abs(a)), _arg(a) + 2 * pi * (k and assert_int(k) or 0))
 end
 
-local ccos = function(a)
-	return (cexp(1i * a) + cexp(-1i * a)) / 2
+local _pow = function(a, n, k)
+	return _exp(n * _log(a, k))
 end
 
-local ctan = function(a)
-	return csin(a) / ccos(a)
+local _sqrt = function(a, k)
+	return _pow(a, 0.5, k)
 end
 
-local ccot = function(a)
-	return 1 / ctan(a)
+local _sin = function(a)
+	return (_exp(1i * a) - _exp(-1i * a)) / 2i
 end
 
-local casin = function(a)
-	return -1i * clog(1i * a + (1 - a ^ 2) ^ 0.5)
+local _cos = function(a)
+	return (_exp(1i * a) + _exp(-1i * a)) / 2
 end
 
-local cacos = function(a)
-	return -1i * clog(a + 1i * (1 - a ^ 2) ^ 0.5)
+local _tan = function(a)
+	return _sin(a) / _cos(a)
 end
 
-local catan = function(a)
-	return -1i / 2 * clog((1i - a) / (1i + a))
+local _cot = function(a)
+	return _cos(a) / _sin(a)
 end
 
-local cacot = function(a)
-	return 1i / 2 * clog((a - 1i) / (a + 1i))
+local _asin = function(a, k1, k2)
+	return -1i * _log(1i * a + _pow(1 - _pow(a, 2), 0.5, k2), k1)
 end
 
-local csinh = function(a)
-	return (cexp(a) - cexp(-a)) / 2
+local _acos = function(a, k1, k2)
+	return -1i * _log(a + 1i * _pow(1 - _pow(a, 2), 0.5, k2), k1)
 end
 
-local ccosh = function(a)
-	return (cexp(a) + cexp(-a)) / 2
+local _atan = function(a, k)
+	return -1i / 2 * _log((1i - a) / (1i + a), k)
 end
 
-local ctanh = function(a)
-	return csinh(a) / ccosh(a)
+local _acot = function(a, k)
+	return 1i / 2 * _log((a - 1i) / (a + 1i), k)
 end
 
-local ccoth = function(a)
-	return ccosh(a) / csinh(a)
-end
---
-local casinh = function(a)
-	return 1i * casin(-1i * a)
+local _sinh = function(a)
+	return (_exp(a) - _exp(-a)) / 2
 end
 
-local cacosh = function(a)
-	return 1i * cacos(a)
+local _cosh = function(a)
+	return (_exp(a) + _exp(-a)) / 2
 end
 
-local catanh = function(a)
-	return 1i * catan(-1i * a)
+local _tanh = function(a)
+	return _sinh(a) / _cosh(a)
 end
 
-local cacoth = function(a)
-	return 1i * cacot(1i * a)
+local _coth = function(a)
+	return _cosh(a) / _sinh(a)
 end
 
-local conjugate = function(a)
-	a = tocomplex(a)
+local _asinh = function(a, k1, k2)
+	return 1i * _asin(-1i * a, k1, k2)
+end
+
+local _acosh = function(a, k1, k2)
+	return 1i * _acos(a, k1, k2)
+end
+
+local _atanh = function(a, k)
+	return 1i * _atan(-1i * a, k)
+end
+
+local _acoth = function(a, k)
+	return 1i * _acot(1i * a, k)
+end
+
+local _conj = function(a) -- conjugate
 	return complex(a[0], -a[1])
 end
 
+--------------------------------------------------------------------------------
+
+local cmath = {}
+local cplex = {}
+
+cmath.complex = complex
+cmath.complexpolar = complexpolar
+cmath.iscomplex = iscomplex
 cmath.tocomplex = tocomplex
-cmath.abs = cabs
-cmath.arg = carg
-cmath.npolar = cnpolar
-cmath.cpolar = ccpolar
-cmath.log = clog
-cmath.exp = cexp
-cmath.sin = csin
-cmath.cos = ccos
-cmath.tan = ctan
-cmath.cot = ccot
-cmath.asin = casin
-cmath.acos = cacos
-cmath.atan = catan
-cmath.acot = cacot
-cmath.sinh = csinh
-cmath.cosh = ccosh
-cmath.tanh = ctanh
-cmath.coth = ccoth
-cmath.asinh = casinh
-cmath.acosh = cacosh
-cmath.atanh = catanh
-cmath.acoth = cacoth
-cmath.conjugate = conjugate
+cmath.random = complexrandom
+
+cmath.copy	= function(a, ...) return _copy(tocomplex(a), ...) end
+cmath.abs	= function(a, ...) return _abs(tocomplex(a), ...) end
+cmath.arg	= function(a, ...) return _arg(tocomplex(a), ...) end
+cmath.polar	= function(a, ...) return _polar(tocomplex(a), ...) end
+cmath.pow	= function(a, ...) return _pow(tocomplex(a), ...) end
+cmath.sqrt	= function(a, ...) return _sqrt(tocomplex(a), ...) end
+cmath.log	= function(a, ...) return _log(tocomplex(a), ...) end
+cmath.exp	= function(a, ...) return _exp(tocomplex(a), ...) end
+cmath.sin	= function(a, ...) return _sin(tocomplex(a), ...) end
+cmath.cos	= function(a, ...) return _cos(tocomplex(a), ...) end
+cmath.tan	= function(a, ...) return _tan(tocomplex(a), ...) end
+cmath.cot	= function(a, ...) return _cot(tocomplex(a), ...) end
+cmath.asin	= function(a, ...) return _asin(tocomplex(a), ...) end
+cmath.acos	= function(a, ...) return _acos(tocomplex(a), ...) end
+cmath.atan	= function(a, ...) return _atan(tocomplex(a), ...) end
+cmath.acot	= function(a, ...) return _acot(tocomplex(a), ...) end
+cmath.sinh	= function(a, ...) return _sinh(tocomplex(a), ...) end
+cmath.cosh	= function(a, ...) return _cosh(tocomplex(a), ...) end
+cmath.tanh	= function(a, ...) return _tanh(tocomplex(a), ...) end
+cmath.coth	= function(a, ...) return _coth(tocomplex(a), ...) end
+cmath.asinh	= function(a, ...) return _asinh(tocomplex(a), ...) end
+cmath.acosh	= function(a, ...) return _acosh(tocomplex(a), ...) end
+cmath.atanh	= function(a, ...) return _atanh(tocomplex(a), ...) end
+cmath.acoth	= function(a, ...) return _acoth(tocomplex(a), ...) end
+cmath.conj	= function(a, ...) return _conj(tocomplex(a), ...) end
+
+cplex.copy	= _copy
+cplex.abs	= _abs
+cplex.arg	= _arg
+cplex.polar	= _polar
+cplex.pow	= _pow
+cplex.sqrt	= _sqrt
+cplex.log	= _log
+cplex.exp	= _exp
+cplex.sin	= _sin
+cplex.cos	= _cos
+cplex.tan	= _tan
+cplex.cot	= _cot
+cplex.asin	= _asin
+cplex.acos	= _acos
+cplex.atan	= _atan
+cplex.acot	= _acot
+cplex.sinh	= _sinh
+cplex.cosh	= _cosh
+cplex.tanh	= _tanh
+cplex.coth	= _coth
+cplex.asinh	= _asinh
+cplex.acosh	= _acosh
+cplex.atanh	= _atanh
+cplex.acoth	= _acoth
+cplex.conj	= _conj
+
+--------------------------------------------------------------------------------
+
+local mt = {}
 
 mt.__index = function(_, key)
-	return cmath[key]
+	return cplex[key]
 end
 
 mt.__eq = function(a, b)
@@ -179,36 +248,29 @@ end
 
 mt.__pow = function(a, b)
 	a, b = tocomplex(a), tocomplex(b)
-	return cexp(b * clog(a))
+	return _pow(a, b)
+end
+
+mt.__mod = function(a, b)
+	return error("__mod is not implemented")
+end
+
+mt.__len = function(a, b)
+	return error("__len is not implemented")
+end
+
+mt.__lt = function(a, b)
+	return error("__lt is not implemented")
+end
+
+mt.__le = function(a, b)
+	return error("__le is not implemented")
+end
+
+mt.__concat = function(a, b)
+	return tostring(a) .. tostring(b)
 end
 
 cmath.complex = ffi.metatype(complex, mt)
-
-local eps = 1e-12
-
-assert(1i == 1i)
-assert(1i ~= 2i)
-assert(1i + 1i == 2i)
-assert(1 + 2i == 2i + 1)
-assert(1 - 2i == -(2i - 1))
-assert(1 - 2i == -(2i - 1))
-assert(cmath.conjugate(1 - 2i) == 1 + 2i)
-assert(cmath.abs(cmath.exp(1i * math.pi) + 1) < eps)
-assert(1i ^ 1i == math.exp(-pi / 2))
-assert(cmath.abs(cmath.cpolar(1, math.pi / 2) - 1i) < eps)
-
-local r, f = cmath.npolar(1 + 1i)
-assert(math.abs(r - math.sqrt(2)) < 1e-12)
-assert(math.abs(f - math.pi / 4) < 1e-12)
-
-local z = 1 + 1i
-assert(cmath.abs(cmath.asin(cmath.sin(z)) - z) < eps)
-assert(cmath.abs(cmath.acos(cmath.cos(z)) - z) < eps)
-assert(cmath.abs(cmath.atan(cmath.tan(z)) - z) < eps)
-assert(cmath.abs(cmath.acot(cmath.cot(z)) - z) < eps)
-assert(cmath.abs(cmath.asinh(cmath.sinh(z)) - z) < eps)
-assert(cmath.abs(cmath.acosh(cmath.cosh(z)) - z) < eps)
-assert(cmath.abs(cmath.atanh(cmath.tanh(z)) - z) < eps)
-assert(cmath.abs(cmath.acoth(cmath.coth(z)) - z) < eps)
 
 return cmath

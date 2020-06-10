@@ -1,0 +1,2 @@
+luajit test.lua
+pause
