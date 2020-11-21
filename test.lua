@@ -1,9 +1,5 @@
 local cmath = require("init")
-local sin = math.sin
-local cos = math.cos
 local sqrt = math.sqrt
-local atan2 = math.atan2
-local log = math.log
 local exp = math.exp
 local pi = math.pi
 
@@ -13,19 +9,15 @@ local equals = function(a, b)
 	assert(b)
 	return assert(cmath.abs(a - b) < eps)
 end
-local notequals = function(a, b)
-	assert(a)
-	assert(b)
-	return assert(cmath.abs(a - b) >= eps)
-end
 
 assert(cmath.iscomplex(1i))
 assert(cmath.iscomplex(1 + 1i))
 assert(not cmath.iscomplex(1))
-assert(tostring(1+1i) == "1+1i")
+assert(tostring(1 + 1i) == "1+1i")
 assert((1 + 1i) .. (2 + 2i) == "1+1i2+2i")
 assert((1 + 1i):copy() == 1 + 1i)
 assert((1 + 1i):sqrt() == (1 + 1i) ^ 0.5)
+assert((0 + 0i) ^ 2 == 0 + 0i)
 
 equals(-1, 1i * {0, 1})
 equals(-1, {sqrt(2) / 2, sqrt(2) / 2} * cmath.exp(3i * pi / 4))
@@ -67,15 +59,18 @@ equals(z, z:cosh():acosh(0, 1))
 equals(z + pi * 1i, z:tanh():atanh())
 equals(z + pi * 1i, z:coth():acoth())
 
-local k1, k2 = 123, 456
-equals(z, z:sin():asin(k1, k2):sin():asin())
-equals(z, z:cos():acos(k1, k2):cos():acos())
-equals(z, z:tan():atan(k1):tan():atan())
-equals(z, z:cot():acot(k1):cot():acot())
-equals(-z - pi * 1i, z:sinh():asinh(k1, k2):sinh():asinh())
-equals(z, z:cosh():acosh(k1, k2):cosh():acosh(0, 1))
-equals(z + pi * 1i, z:tanh():atanh(k1):tanh():atanh())
-equals(z + pi * 1i, z:coth():acoth(k1):coth():acoth())
+for k1 = -2, 2 do
+	for k2 = -2, 2 do
+		equals(z, z:sin():asin(k1, k2):sin():asin())
+		equals(z, z:cos():acos(k1, k2):cos():acos())
+		equals(z, z:tan():atan(k1):tan():atan())
+		equals(z, z:cot():acot(k1):cot():acot())
+		equals(-z - pi * 1i, z:sinh():asinh(k1, k2):sinh():asinh())
+		equals(z, z:cosh():acosh(k1, k2):cosh():acosh(0, 1))
+		equals(z + pi * 1i, z:tanh():atanh(k1):tanh():atanh())
+		equals(z + pi * 1i, z:coth():acoth(k1):coth():acoth())
+	end
+end
 
 equals((1i):pow(2), -1)
 
@@ -91,5 +86,8 @@ equals(z:pow(1 / 4, 3):pow(4), z)
 
 math.randomseed(os.time())
 assert(cmath.random():abs() <= 1)
+
+equals(({(1.2 + 3.4i):modf()})[1], 1 + 3i)
+equals(({(1.2 + 3.4i):modf()})[2], 0.2 + 0.4i)
 
 print("OK")

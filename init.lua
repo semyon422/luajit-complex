@@ -6,6 +6,7 @@ local atan2 = math.atan2
 local log = math.log
 local exp = math.exp
 local floor = math.floor
+local modf = math.modf
 local random = math.random
 local pi = math.pi
 
@@ -35,7 +36,7 @@ local tocomplex = function(a)
 end
 
 local assert_int = function(a)
-	return assert(floor(a) == a, "k should be integer") and a
+	return assert(a and floor(a) == a, "k should be integer") and a
 end
 
 local complexrandom = function()
@@ -66,10 +67,16 @@ local _exp = function(a)
 end
 
 local _log = function(a, k)
-	return complex(log(_abs(a)), _arg(a) + 2 * pi * (k and assert_int(k) or 0))
+	if a == 0 then
+		return 0 / 0
+	end
+	return complex(log(_abs(a)), _arg(a) + 2 * pi * assert_int(k or 0))
 end
 
 local _pow = function(a, n, k)
+	if a == 0 and n ~= 0 then
+		return 0
+	end
 	return _exp(n * _log(a, k))
 end
 
@@ -92,6 +99,11 @@ end
 local _cot = function(a)
 	return _cos(a) / _sin(a)
 end
+
+--[[
+https://en.wikipedia.org/wiki/Inverse_trigonometric_functions
+https://en.wikipedia.org/wiki/Inverse_hyperbolic_functions
+]]
 
 local _asin = function(a, k1, k2)
 	return -1i * _log(1i * a + _pow(1 - _pow(a, 2), 0.5, k2), k1)
@@ -141,8 +153,14 @@ local _acoth = function(a, k)
 	return 1i * _acot(1i * a, k)
 end
 
-local _conj = function(a) -- conjugate
+local _conj = function(a)
 	return complex(a[0], -a[1])
+end
+
+local _modf = function(a)
+	local x, dx = modf(a.re)
+	local y, dy = modf(a.im)
+	return complex(x, y), complex(dx, dy)
 end
 
 --------------------------------------------------------------------------------
@@ -181,6 +199,7 @@ cmath.acosh	= function(a, ...) return _acosh(tocomplex(a), ...) end
 cmath.atanh	= function(a, ...) return _atanh(tocomplex(a), ...) end
 cmath.acoth	= function(a, ...) return _acoth(tocomplex(a), ...) end
 cmath.conj	= function(a, ...) return _conj(tocomplex(a), ...) end
+cmath.modf	= function(a, ...) return _modf(tocomplex(a), ...) end
 
 cplex.copy	= _copy
 cplex.abs	= _abs
@@ -207,6 +226,7 @@ cplex.acosh	= _acosh
 cplex.atanh	= _atanh
 cplex.acoth	= _acoth
 cplex.conj	= _conj
+cplex.modf	= _modf
 
 --------------------------------------------------------------------------------
 
@@ -247,23 +267,22 @@ mt.__div = function(a, b)
 end
 
 mt.__pow = function(a, b)
-	a, b = tocomplex(a), tocomplex(b)
-	return _pow(a, b)
+	return _pow(tocomplex(a), tocomplex(b))
 end
 
-mt.__mod = function(a, b)
+mt.__mod = function()
 	return error("__mod is not implemented")
 end
 
-mt.__len = function(a, b)
-	return error("__len is not implemented")
+mt.__len = function(a)
+	return _abs(a)
 end
 
-mt.__lt = function(a, b)
+mt.__lt = function()
 	return error("__lt is not implemented")
 end
 
-mt.__le = function(a, b)
+mt.__le = function()
 	return error("__le is not implemented")
 end
 
