@@ -1,1 +1,1 @@
-luajit -i init.lua
+@luajit -e cmath=require('init') -i
