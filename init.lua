@@ -5,7 +5,6 @@ local sqrt = math.sqrt
 local atan2 = math.atan2
 local log = math.log
 local exp = math.exp
-local floor = math.floor
 local modf = math.modf
 local random = math.random
 local pi = math.pi
@@ -14,90 +13,81 @@ local pi = math.pi
 
 local complex = ffi.typeof(1i)
 
-local complexpolar = function(r, t)
+local iscomplex = function(z)
+	return ffi.istype(complex, z)
+end
+
+local tocomplex = function(v)
+	if iscomplex(v) then
+		return v
+	end
+
+	return complex(v)  -- Accepts numbers, strings, tables.
+end
+
+local assert_int = function(x)
+	return assert(x and x % 1 == 0, "k should be integer") and x
+end
+
+local frompolar = function(r, t)
 	return complex(r * cos(t), r * sin(t))
 end
 
-local iscomplex = function(a)
-	return ffi.istype(complex, a)
-end
-
-local tocomplex = function(a)
-	if iscomplex(a) then
-		return a
-	end
-
-	local n = tonumber(a)
-	if n then
-		return complex(n)
-	end
-
-	return complex(a) -- error
-end
-
-local assert_int = function(a)
-	return assert(a and floor(a) == a, "k should be integer") and a
-end
-
-local complexrandom = function()
-	return complexpolar(random(), random() * 2 * pi)
+local _random = function()
+	return frompolar(random(), random() * 2 * pi)
 end
 
 --------------------------------------------------------------------------------
 
-local _copy = function(a)
-	return complex(a[0], a[1])
+local _copy = function(z)
+	return complex(z[0], z[1])
 end
 
-local _abs = function(a)
-	return sqrt(a[0] ^ 2 + a[1] ^ 2)
+local _abs = function(z)
+	return sqrt(z[0] ^ 2 + z[1] ^ 2)
 end
 
-local _arg = function(a)
-	return atan2(a[1], a[0])
+local _arg = function(z)
+	return atan2(z[1], z[0])
 end
 
-local _polar = function(a)
-	return _abs(a), _arg(a)
+local _polar = function(z)
+	return _abs(z), _arg(z)
 end
 
-local _exp = function(a)
-	local r = exp(a[0])
-	return complex(r * cos(a[1]), r * sin(a[1]))
+local _exp = function(z)
+	local r = exp(z[0])
+	return complex(r * cos(z[1]), r * sin(z[1]))
 end
 
-local _log = function(a, k)
-	if a == 0 then
-		return 0 / 0
-	end
-	return complex(log(_abs(a)), _arg(a) + 2 * pi * assert_int(k or 0))
+local _log = function(z, k)
+	if z == 0 then return 0 / 0	end
+	return complex(log(_abs(z)), _arg(z) + 2 * pi * assert_int(k or 0))
 end
 
-local _pow = function(a, n, k)
-	if a == 0 and n ~= 0 then
-		return 0
-	end
-	return _exp(n * _log(a, k))
+local _pow = function(z, n, k)
+	if z == 0 and n ~= 0 then return 0 end
+	return _exp(n * _log(z, k))
 end
 
-local _sqrt = function(a, k)
-	return _pow(a, 0.5, k)
+local _sqrt = function(z, k)
+	return _pow(z, 0.5, k)
 end
 
-local _sin = function(a)
-	return (_exp(1i * a) - _exp(-1i * a)) / 2i
+local _sin = function(z)
+	return (_exp(1i * z) - _exp(-1i * z)) / 2i
 end
 
-local _cos = function(a)
-	return (_exp(1i * a) + _exp(-1i * a)) / 2
+local _cos = function(z)
+	return (_exp(1i * z) + _exp(-1i * z)) / 2
 end
 
-local _tan = function(a)
-	return _sin(a) / _cos(a)
+local _tan = function(z)
+	return _sin(z) / _cos(z)
 end
 
-local _cot = function(a)
-	return _cos(a) / _sin(a)
+local _cot = function(z)
+	return _cos(z) / _sin(z)
 end
 
 --[[
@@ -105,61 +95,61 @@ https://en.wikipedia.org/wiki/Inverse_trigonometric_functions
 https://en.wikipedia.org/wiki/Inverse_hyperbolic_functions
 ]]
 
-local _asin = function(a, k1, k2)
-	return -1i * _log(1i * a + _pow(1 - _pow(a, 2), 0.5, k2), k1)
+local _asin = function(z, k1, k2)
+	return -1i * _log(1i * z + _pow(1 - _pow(z, 2), 0.5, k2), k1)
 end
 
-local _acos = function(a, k1, k2)
-	return -1i * _log(a + 1i * _pow(1 - _pow(a, 2), 0.5, k2), k1)
+local _acos = function(z, k1, k2)
+	return -1i * _log(z + 1i * _pow(1 - _pow(z, 2), 0.5, k2), k1)
 end
 
-local _atan = function(a, k)
-	return -1i / 2 * _log((1i - a) / (1i + a), k)
+local _atan = function(z, k)
+	return -1i / 2 * _log((1i - z) / (1i + z), k)
 end
 
-local _acot = function(a, k)
-	return 1i / 2 * _log((a - 1i) / (a + 1i), k)
+local _acot = function(z, k)
+	return 1i / 2 * _log((z - 1i) / (z + 1i), k)
 end
 
-local _sinh = function(a)
-	return (_exp(a) - _exp(-a)) / 2
+local _sinh = function(z)
+	return (_exp(z) - _exp(-z)) / 2
 end
 
-local _cosh = function(a)
-	return (_exp(a) + _exp(-a)) / 2
+local _cosh = function(z)
+	return (_exp(z) + _exp(-z)) / 2
 end
 
-local _tanh = function(a)
-	return _sinh(a) / _cosh(a)
+local _tanh = function(z)
+	return _sinh(z) / _cosh(z)
 end
 
-local _coth = function(a)
-	return _cosh(a) / _sinh(a)
+local _coth = function(z)
+	return _cosh(z) / _sinh(z)
 end
 
-local _asinh = function(a, k1, k2)
-	return 1i * _asin(-1i * a, k1, k2)
+local _asinh = function(z, k1, k2)
+	return 1i * _asin(-1i * z, k1, k2)
 end
 
-local _acosh = function(a, k1, k2)
-	return 1i * _acos(a, k1, k2)
+local _acosh = function(z, k1, k2)
+	return 1i * _acos(z, k1, k2)
 end
 
-local _atanh = function(a, k)
-	return 1i * _atan(-1i * a, k)
+local _atanh = function(z, k)
+	return 1i * _atan(-1i * z, k)
 end
 
-local _acoth = function(a, k)
-	return 1i * _acot(1i * a, k)
+local _acoth = function(z, k)
+	return 1i * _acot(1i * z, k)
 end
 
-local _conj = function(a)
-	return complex(a[0], -a[1])
+local _conj = function(z)
+	return complex(z[0], -z[1])
 end
 
-local _modf = function(a)
-	local x, dx = modf(a.re)
-	local y, dy = modf(a.im)
+local _modf = function(z)
+	local x, dx = modf(z.re)
+	local y, dy = modf(z.im)
 	return complex(x, y), complex(dx, dy)
 end
 
@@ -169,37 +159,10 @@ local cmath = {}
 local cplex = {}
 
 cmath.complex = complex
-cmath.complexpolar = complexpolar
+cmath.frompolar = frompolar
 cmath.iscomplex = iscomplex
 cmath.tocomplex = tocomplex
-cmath.random = complexrandom
-
-cmath.copy	= function(a, ...) return _copy(tocomplex(a), ...) end
-cmath.abs	= function(a, ...) return _abs(tocomplex(a), ...) end
-cmath.arg	= function(a, ...) return _arg(tocomplex(a), ...) end
-cmath.polar	= function(a, ...) return _polar(tocomplex(a), ...) end
-cmath.pow	= function(a, ...) return _pow(tocomplex(a), ...) end
-cmath.sqrt	= function(a, ...) return _sqrt(tocomplex(a), ...) end
-cmath.log	= function(a, ...) return _log(tocomplex(a), ...) end
-cmath.exp	= function(a, ...) return _exp(tocomplex(a), ...) end
-cmath.sin	= function(a, ...) return _sin(tocomplex(a), ...) end
-cmath.cos	= function(a, ...) return _cos(tocomplex(a), ...) end
-cmath.tan	= function(a, ...) return _tan(tocomplex(a), ...) end
-cmath.cot	= function(a, ...) return _cot(tocomplex(a), ...) end
-cmath.asin	= function(a, ...) return _asin(tocomplex(a), ...) end
-cmath.acos	= function(a, ...) return _acos(tocomplex(a), ...) end
-cmath.atan	= function(a, ...) return _atan(tocomplex(a), ...) end
-cmath.acot	= function(a, ...) return _acot(tocomplex(a), ...) end
-cmath.sinh	= function(a, ...) return _sinh(tocomplex(a), ...) end
-cmath.cosh	= function(a, ...) return _cosh(tocomplex(a), ...) end
-cmath.tanh	= function(a, ...) return _tanh(tocomplex(a), ...) end
-cmath.coth	= function(a, ...) return _coth(tocomplex(a), ...) end
-cmath.asinh	= function(a, ...) return _asinh(tocomplex(a), ...) end
-cmath.acosh	= function(a, ...) return _acosh(tocomplex(a), ...) end
-cmath.atanh	= function(a, ...) return _atanh(tocomplex(a), ...) end
-cmath.acoth	= function(a, ...) return _acoth(tocomplex(a), ...) end
-cmath.conj	= function(a, ...) return _conj(tocomplex(a), ...) end
-cmath.modf	= function(a, ...) return _modf(tocomplex(a), ...) end
+cmath.random = _random
 
 cplex.copy	= _copy
 cplex.abs	= _abs
@@ -236,46 +199,46 @@ mt.__index = function(_, key)
 	return cplex[key]
 end
 
-mt.__eq = function(a, b)
-	a, b = tocomplex(a), tocomplex(b)
-	return a[0] == b[0] and a[1] == b[1]
+mt.__eq = function(z, c)
+	z, c = tocomplex(z), tocomplex(c)
+	return z[0] == c[0] and z[1] == c[1]
 end
 
-mt.__unm = function(a)
-	return complex(-a[0], -a[1])
+mt.__unm = function(z)
+	return complex(-z[0], -z[1])
 end
 
-mt.__add = function(a, b)
-	a, b = tocomplex(a), tocomplex(b)
-	return complex(a[0] + b[0], a[1] + b[1])
+mt.__add = function(z, c)
+	z, c = tocomplex(z), tocomplex(c)
+	return complex(z[0] + c[0], z[1] + c[1])
 end
 
-mt.__sub = function(a, b)
-	a, b = tocomplex(a), tocomplex(b)
-	return complex(a[0] - b[0], a[1] - b[1])
+mt.__sub = function(z, c)
+	z, c = tocomplex(z), tocomplex(c)
+	return complex(z[0] - c[0], z[1] - c[1])
 end
 
-mt.__mul = function(a, b)
-	a, b = tocomplex(a), tocomplex(b)
-	return complex(a[0] * b[0] - a[1] * b[1], a[0] * b[1] + a[1] * b[0])
+mt.__mul = function(z, c)
+	z, c = tocomplex(z), tocomplex(c)
+	return complex(z[0] * c[0] - z[1] * c[1], z[0] * c[1] + z[1] * c[0])
 end
 
-mt.__div = function(a, b)
-	a, b = tocomplex(a), tocomplex(b)
-	local d = b[0] ^ 2 + b[1] ^ 2
-	return complex((a[0] * b[0] + a[1] * b[1]) / d, (a[1] * b[0] - a[0] * b[1]) / d)
+mt.__div = function(z, c)
+	z, c = tocomplex(z), tocomplex(c)
+	local d = c[0] ^ 2 + c[1] ^ 2
+	return complex((z[0] * c[0] + z[1] * c[1]) / d, (z[1] * c[0] - z[0] * c[1]) / d)
 end
 
-mt.__pow = function(a, b)
-	return _pow(tocomplex(a), tocomplex(b))
+mt.__pow = function(z, c)
+	return _pow(tocomplex(z), tocomplex(c))
 end
 
 mt.__mod = function()
 	return error("__mod is not implemented")
 end
 
-mt.__len = function(a)
-	return _abs(a)
+mt.__len = function(z)
+	return _abs(z)
 end
 
 mt.__lt = function()
@@ -286,8 +249,8 @@ mt.__le = function()
 	return error("__le is not implemented")
 end
 
-mt.__concat = function(a, b)
-	return tostring(a) .. tostring(b)
+mt.__concat = function(z, c)
+	return tostring(z) .. tostring(c)
 end
 
 cmath.complex = ffi.metatype(complex, mt)

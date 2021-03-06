@@ -7,7 +7,7 @@ local eps = 1e-12
 local equals = function(a, b)
 	assert(a)
 	assert(b)
-	return assert(cmath.abs(a - b) < eps)
+	return assert(cmath.tocomplex(a - b):abs() < eps)
 end
 
 assert(cmath.iscomplex(1i))
@@ -20,7 +20,7 @@ assert((1 + 1i):sqrt() == (1 + 1i) ^ 0.5)
 assert((0 + 0i) ^ 2 == 0 + 0i)
 
 equals(-1, 1i * {0, 1})
-equals(-1, {sqrt(2) / 2, sqrt(2) / 2} * cmath.exp(3i * pi / 4))
+equals(-1, {sqrt(2) / 2, sqrt(2) / 2} * (3i * pi / 4):exp())
 
 assert(1i == 1i)
 assert(1i ~= 2i)
@@ -30,10 +30,10 @@ assert(1 - 2i == -(2i - 1))
 assert(1 - 2i == -(2i - 1))
 assert((1 - 2i):conj() == 1 + 2i)
 
-equals(cmath.sqrt(-1), 1i)
+equals(cmath.tocomplex(-1):sqrt(), 1i)
 equals((1i * pi):exp(), -1)
 equals(1i ^ 1i, exp(-pi / 2))
-equals(cmath.complexpolar(1, pi / 2), 1i)
+equals(cmath.frompolar(1, pi / 2), 1i)
 
 local r, t = (1 + 1i):polar()
 equals(r, sqrt(2))
